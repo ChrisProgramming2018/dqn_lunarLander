@@ -7,10 +7,10 @@ import torch.nn.functional as F
 class ReplayBuffer(object):
     """Buffer to store environment transitions."""
     def __init__(self, obs_shape, action_shape, capacity, seed, device):
-        self.capacity = capacity
-        self.device = device
         np.random.seed(seed=seed)
         self.seed = torch.manual_seed(seed)
+        self.capacity = capacity
+        self.device = device
         self.obses = np.empty((capacity, *obs_shape), dtype=np.float32)
         self.next_obses = np.empty((capacity, *obs_shape), dtype=np.float32)
         self.actions = np.empty((capacity, *action_shape), dtype=np.int64)
@@ -46,7 +46,7 @@ class ReplayBuffer(object):
 
         obses = torch.as_tensor(obses, device=self.device)
         next_obses = torch.as_tensor(next_obses, device=self.device)
-        actions = torch.as_tensor(self.actions[idxs], device=self.device, dtype=torch.int64)
+        actions = torch.as_tensor(self.actions[idxs], device=self.device)
         rewards = torch.as_tensor(self.rewards[idxs], device=self.device)
         not_dones_no_max = torch.as_tensor(self.not_dones_no_max[idxs], device=self.device)
         return obses, actions, rewards, next_obses, not_dones_no_max
