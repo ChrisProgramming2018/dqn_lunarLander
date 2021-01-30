@@ -52,11 +52,7 @@ class DQNAgent():
         dt_string = now.strftime("%d_%m_%Y_%H:%M:%S")
         pathname = dt_string + "_use_double_" + str(self.ddqn) + "seed_" + str(config['seed'])
         tensorboard_name = str(config["locexp"]) + '/runs/' + pathname
-<<<<<<< HEAD
         self.vid_path = str(config["locexp"]) + "/vid"
-=======
-        self.vid_path = str(config["locexp"])
->>>>>>> 62c9031c0fdc4e7db2962c76212c5f5e381ada59
         self.writer = SummaryWriter(tensorboard_name)
         self.steps = 0
         self.eps_decay = config["eps_decay"]
@@ -65,7 +61,6 @@ class DQNAgent():
         self.episodes = config["episodes"]
         self.eval = config["eval"]
         self.locexp = str(config["locexp"])
-<<<<<<< HEAD
         self.update_freq = config["update_freq"]
         self.agent = config["agent"]
         self.memory_size = config["memory_size"]
@@ -75,14 +70,6 @@ class DQNAgent():
         if self.steps % self.update_freq == 0:
             if len(self.memory) > self.batch_size:
                 self.learn()
-=======
-    
-    def step(self, memory):
-        self.t_step +=1 
-        if self.t_step % 4 == 0:
-            if len(memory) > self.batch_size:
-                self.learn(memory)
->>>>>>> 62c9031c0fdc4e7db2962c76212c5f5e381ada59
 
     def act(self, state, eps=0.):
         """Returns actions for given state as per current policy.
@@ -111,13 +98,8 @@ class DQNAgent():
             experiences (Tuple[torch.Tensor]): tuple of (s, a, r, s', done) tuples 
             gamma (float): discount factor
         """
-<<<<<<< HEAD
         self.steps += 1
         states, actions, rewards, next_states, dones = self.memory.sample(self.batch_size)
-=======
-        states, actions, rewards, next_states, dones = self.memory.sample(self.batch_size)
-
->>>>>>> 62c9031c0fdc4e7db2962c76212c5f5e381ada59
         # Get max predicted Q values (for next states) from target model
         if self.ddqn:
             local_actions = self.qnetwork_local(next_states).detach().max(1)[0]
@@ -157,14 +139,11 @@ class DQNAgent():
         torch.save(self.qnetwork_target.state_dict(), filename + "_critic")
         torch.save(self.optimizer.state_dict(), filename + "_critic_optimizer")
 
-<<<<<<< HEAD
     def load_model(self, filename):
         self.qnetwork_local.load_state_dict(torch.load(filename + "_critic"))
         self.optimizer.load_state_dict(torch.load(filename + "_critic_optimizer"))
         print("... model loaded")
 
-=======
->>>>>>> 62c9031c0fdc4e7db2962c76212c5f5e381ada59
     def train_agent(self):
         average_reward = 0
         scores_window = deque(maxlen=100)
@@ -180,11 +159,7 @@ class DQNAgent():
                 next_state, reward, done, _ = self.env.step(action)
                 episode_reward += reward
                 if i_epiosde > 10:
-<<<<<<< HEAD
                     self.step()
-=======
-                    self.learn()
->>>>>>> 62c9031c0fdc4e7db2962c76212c5f5e381ada59
                 self.memory.add(state, action, reward, next_state, done, done)
                 state = next_state
                 if done:
@@ -219,11 +194,7 @@ class DQNAgent():
         average_reward = 0
         scores_window = deque(maxlen=100)
         for i_epiosde in range(eval_episodes):
-<<<<<<< HEAD
             print("Eval Episode {} of {} ".format(i_epiosde, eval_episodes))
-=======
-            print("Eval Episode {} of {} ".format(i_epiosde, self.episodes))
->>>>>>> 62c9031c0fdc4e7db2962c76212c5f5e381ada59
             episode_reward = 0
             state = env.reset()
             while True:
@@ -234,7 +205,6 @@ class DQNAgent():
                     scores_window.append(episode_reward)
                     break
         average_reward = np.mean(scores_window)
-<<<<<<< HEAD
         print("Eval reward ", average_reward)
         self.writer.add_scalar('Eval_reward', average_reward, self.steps)
 
@@ -270,7 +240,3 @@ class DQNAgent():
                     break
             
 
-=======
-        self.writer.add_scalar('Eval_reward', average_reward, self.steps)
-
->>>>>>> 62c9031c0fdc4e7db2962c76212c5f5e381ada59

@@ -15,9 +15,6 @@
   "eps_end": 0.01,
   "eps_decay": 0.995,
   "eval": 50,
-<<<<<<< HEAD
   "update_freq":1,
-=======
->>>>>>> 62c9031c0fdc4e7db2962c76212c5f5e381ada59
   "device": "cuda"
 }
