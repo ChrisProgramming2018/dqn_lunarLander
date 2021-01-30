@@ -23,12 +23,16 @@ def main(args):
     print('State shape: ', env.observation_space.shape)
     print('Number of actions: ', env.action_space.n)
     agent = DQNAgent(state_size=8, action_size=4, config=config)
+<<<<<<< HEAD
     if args.mode == "train":
         agent.train_agent()
     if args.mode == "eval":
         agent.watch_trained_agent(20)
     if args.mode == "m":
         agent.create_expert_memory()
+=======
+    agent.train_agent()
+>>>>>>> 62c9031c0fdc4e7db2962c76212c5f5e381ada59
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

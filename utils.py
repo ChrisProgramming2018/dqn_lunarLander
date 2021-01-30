@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import os
 
 
@@ -13,6 +14,10 @@ def mkdir(base, name):
     if not os.path.exists(path):
         os.makedirs(path)
     return path
+=======
+
+
+>>>>>>> 62c9031c0fdc4e7db2962c76212c5f5e381ada59
 
 def time_format(sec):
     """
