@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import torch
 import torch.nn as nn
@@ -65,19 +66,14 @@ class ReplayBuffer(object):
 
         return obses, next_obses, actions, dones
 
-    def add_expert(self, obs, action, reward, next_obs, done, done_no_max):
-        
-        for a in range(4):
-            self.k +=1
-            np.copyto(self.obses[self.idx], obs)
-            np.copyto(self.actions[self.idx], a)
-            np.copyto(self.rewards[self.idx], reward)
-            np.copyto(self.next_obses[self.idx], next_obs)
-            np.copyto(self.not_dones[self.idx], not done)
-            np.copyto(self.not_dones_no_max[self.idx], not done_no_max)
-            
-            self.idx = (self.idx + 1) % self.capacity
-            self.full = self.full or self.idx == 0
+    def add_expert(self, obs, action, next_obs, done, done_no_max):
+        np.copyto(self.obses[self.idx], obs)
+        np.copyto(self.actions[self.idx], a)
+        np.copyto(self.next_obses[self.idx], next_obs)
+        np.copyto(self.not_dones[self.idx], not done)
+        np.copyto(self.not_dones_no_max[self.idx], not done_no_max)
+        self.idx = (self.idx + 1) % self.capacity
+        self.full = self.full or self.idx == 0
 
 
 
@@ -86,7 +82,12 @@ class ReplayBuffer(object):
         """
         Use numpy save function to store the data in a given file
         """
-
+        try:
+            os.mkdir(filename)
+        except OSError:
+            print ("Creation of the directory %s failed" % filename)
+        else:
+            print ("Successfully created the directory %s " % filename)
 
         with open(filename + '/obses.npy', 'wb') as f:
             np.save(f, self.obses)
@@ -96,10 +97,7 @@ class ReplayBuffer(object):
 
         with open(filename + '/next_obses.npy', 'wb') as f:
             np.save(f, self.next_obses)
-        
-        with open(filename + '/rewards.npy', 'wb') as f:
-            np.save(f, self.rewards)
-        
+         
         with open(filename + '/not_dones.npy', 'wb') as f:
             np.save(f, self.not_dones)
         
@@ -125,10 +123,7 @@ class ReplayBuffer(object):
 
         with open(filename + '/next_obses.npy', 'rb') as f:
             self.next_obses = np.load(f)
-        
-        with open(filename + '/rewards.npy', 'rb') as f:
-            self.rewards = np.load(f)
-        
+         
         with open(filename + '/not_dones.npy', 'rb') as f:
             self.not_dones = np.load(f)
         
