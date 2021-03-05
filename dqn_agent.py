@@ -62,8 +62,8 @@ class DQNAgent():
         self.eval = config["eval"]
         self.locexp = str(config["locexp"])
         self.update_freq = config["update_freq"]
-        self.agent = config["agent"]
-        self.memory_size = config["memory_size"]
+        #self.agent = config["agent"]
+        #self.memory_size = config["memory_size"]
 
     def step(self):
         self.steps +=1 
@@ -217,6 +217,7 @@ class DQNAgent():
         t = 0
         episode_reward = 0
         last_idx = 0
+        print("capazity ", self.memory.capacity)
         while True:
             state = self.env.reset()
             while True:
@@ -225,7 +226,7 @@ class DQNAgent():
                 next_state, reward, done, _ = self.env.step(action)
                 episode_reward += reward
                 self.memory.add(state, action, reward, next_state, done, done)
-                if t >= self.memory_size:
+                if self.memory.idx >= self.memory.capacity - 1:
                     self.memory.save_memory("expert_policy_size-{}".format(self.memory.idx))
                     return 
                 state = next_state

@@ -38,7 +38,7 @@ if __name__ == "__main__":
     parser.add_argument('--fc2_units', default=256, type=int)
     parser.add_argument('--seed', default=1, type=int)
     parser.add_argument('--mode', default="train", type=str)
-    parser.add_argument('--buffer_size', default=1e5, type=int)
+    parser.add_argument('--buffer_size', default=3e5, type=int)
     parser.add_argument('--max_episode_steps', default=1000, type=int) 
     parser.add_argument('--agent', default=1, type=int) 
     parser.add_argument('--memory_size', default=5000, type=int) 
