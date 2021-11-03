@@ -21,7 +21,7 @@ def main(args):
     print('Number of actions: ', action_size)
     agent = DQNAgent(state_size=state_size, action_size=action_size, config=config)
     agent.qnetwork_local.load_state_dict(torch.load(args.modelpath))
-    memory = ReplayBuffer((state_size,), (1,), args.max_steps, args.seed, args.device)
+    memory = ReplayBuffer((state_size,), (1,), args.buffer_size + 1, args.seed, args.device)
     total_maxsteps = args.max_steps
     eps = 0
     rewards = []
@@ -39,9 +39,16 @@ def main(args):
             score += reward
             memory.add(state, action, reward, next_state, done, done)
             state = next_state
-            if frame >= total_maxsteps:
-                print("buffer_size ", frame)
-                break
+            if memory.idx >= args.buffer_size: 
+                print("buffer_size ", memory.idx)
+                mean_rewards = np.mean(rewards)
+                print("Episode {} average Reward {}".format(i_episode, score))
+                path="expert_policy_{}".format(memory.idx)
+                mkdir("",path)
+                print("save memory ...")
+                memory.save_memory(path)
+                print("... memory saved in {}".format(path))
+                return
             if done:
                 i_episode += 1
                 if score <= 240:
@@ -53,13 +60,6 @@ def main(args):
                 rewards.append(score)
                 print("Episode {} steps {}  Reward {}".format(i_episode, frame, score))
                 break
-    mean_rewards = np.mean(rewards)
-    print("Episode {} average Reward {}".format(i_episode, score))
-
-    mkdir("","expert_policy")
-    print("save memory ...")
-    memory.save_memory("expert_policy")
-    print("... memory saved")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -67,6 +67,7 @@ if __name__ == "__main__":
     parser.add_argument('--param', default="param.json", type=str)
     parser.add_argument('--modelpath', default="", type=str)
     parser.add_argument('--max_steps', default=100000, type=int)
+    parser.add_argument('--buffer_size', default=1000, type=int)
     parser.add_argument('--seed', default=1, type=int)
     parser.add_argument('--device', default="cuda", type=str)
     arg = parser.parse_args()
