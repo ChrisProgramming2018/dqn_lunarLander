@@ -17,12 +17,17 @@ def main(args):
     config["seed"] = args.seed
     config["agent"] = args.agent
     config["memory_size"] = args.memory_size
-    env = gym.make('LunarLander-v2')
+    if args.game is not None:
+        print("change game ", args.game)
+        config["env_name"] = args.game
+    env = gym.make(config["env_name"])
     #env = gym.wrappers.Monitor(env, "./vid", video_callable=lambda episode_id: True,force=True)
     env.seed(config['seed'])
-    print('State shape: ', env.observation_space.shape)
-    print('Number of actions: ', env.action_space.n)
-    agent = DQNAgent(state_size=8, action_size=4, config=config)
+    state_size = env.observation_space.shape[0]
+    print('State shape: ', state_size)
+    action_size = env.action_space.n
+    print('Number of actions: ', action_size)
+    agent = DQNAgent(state_size=state_size, action_size=action_size, config=config)
     if args.mode == "train":
         agent.train_agent()
     if args.mode == "eval":
@@ -43,6 +48,7 @@ if __name__ == "__main__":
     parser.add_argument('--agent', default=1, type=int) 
     parser.add_argument('--memory_size', default=5000, type=int) 
     parser.add_argument('--locexp', default="", type=str) 
+    parser.add_argument('--game', default=None, type=str) 
     arg = parser.parse_args()
     main(arg)
 

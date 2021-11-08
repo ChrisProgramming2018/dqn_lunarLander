@@ -1,5 +1,5 @@
 {
-  "env_name": "LunarLander-v2",
+  "env_name": "MountainCar-v0",
   "locexp": "search_results",
   "lr": 5e-4,
   "tau": 1e-3,
@@ -14,7 +14,7 @@
   "eps_start": 1,
   "eps_end": 0.01,
   "eps_decay": 0.995,
-  "eval": 50,
+  "eval": 500,
   "update_freq":1,
   "device": "cuda"
 }

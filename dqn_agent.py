@@ -102,10 +102,13 @@ class DQNAgent():
         states, actions, rewards, next_states, dones = self.memory.sample(self.batch_size)
         # Get max predicted Q values (for next states) from target model
         if self.ddqn:
-            local_actions = self.qnetwork_local(next_states).detach().max(1)[0]
+            q_values_next_state = self.qnetwork_local(next_states).detach()  #.max(1)[0].unsqueeze(1) # .type(torch.int64)
+            
+            local_actions = torch.argmax(q_values_next_state, dim=1).unsqueeze(1) # .type(torch.int64)
             Q_targets_next = self.qnetwork_target(next_states).detach().gather(1, local_actions)
         else:
             Q_targets_next = self.qnetwork_target(next_states).detach().max(1)[0].unsqueeze(1)
+        #import pdb; pdb.set_trace()
         # Compute Q targets for current states 
         Q_targets = rewards + (self.gamma * Q_targets_next * dones)
         # Get expected Q values from local model
@@ -147,13 +150,16 @@ class DQNAgent():
     def train_agent(self):
         average_reward = 0
         scores_window = deque(maxlen=100)
+        step_window = deque(maxlen=100)
         eps = self.eps_start
         t = 0
         t0 = time.time()
         for i_epiosde in range(1, self.episodes + 1):
             episode_reward = 0
+            episode_steps = 0
             state = self.env.reset()
             while True:
+                episode_steps += 1
                 t += 1
                 action = self.act(state, eps)
                 next_state, reward, done, _ = self.env.step(action)
@@ -169,9 +175,11 @@ class DQNAgent():
                 self.eval_policy()
             
             scores_window.append(episode_reward)
+            step_window.append(episode_steps)
             eps = max(self.eps_end, self.eps_decay * eps) # decrease epsilon
             ave_reward = np.mean(scores_window)
-            print("Epiosde {} Steps {} Reward {} Reward averge{:.2f}  eps {:.2f} Time {}".format(i_epiosde, t, episode_reward, np.mean(scores_window), eps, time_format(time.time() - t0)))
+            ave_steps = np.mean(step_window)
+            print("Epiosde {} Steps {} Reward {} Reward averge{:.2f} steps {} ave steps {}  eps {:.2f} Time {}".format(i_epiosde, t, episode_reward, ave_reward, episode_steps, ave_steps, eps, time_format(time.time() - t0)))
             self.writer.add_scalar('Aver_reward', ave_reward, self.steps)
             self.writer.add_scalar('steps_in_episode', t, self.steps)
 
@@ -240,4 +248,20 @@ class DQNAgent():
                     episode_reward = 0
                     break
             
+
+
+
+
+class NoisyAgent(DQNAgent):
+    def __init__(self, state_size, action_size, seed, fc1_units=64, fc2_units=64):
+        """Initialize parameters and build model.
+        Params
+        ======
+        state_size (int): Dimension of each state
+        action_size (int): Dimension of each action
+        seed (int): Random seed
+        fc1_units (int): Number of nodes in first hidden layer
+        fc2_units (int): Number of nodes in second hidden layer
+        """
+        super(NoisyAgent, self).__init__()
 
