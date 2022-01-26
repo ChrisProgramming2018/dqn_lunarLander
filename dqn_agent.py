@@ -9,11 +9,13 @@ import torch.optim as optim
 from replay_buffer import ReplayBuffer
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
-from model import QNetwork
+from model import QNetwork, normilze_weights
 import time
 from gym import wrappers
-
+import matplotlib.pyplot as plt
 from utils import time_format
+import wandb
+
 
 class DQNAgent():
     """Interacts with and learns from the environment."""
@@ -64,14 +66,29 @@ class DQNAgent():
         self.update_freq = config["update_freq"]
         #self.agent = config["agent"]
         #self.memory_size = config["memory_size"]
-
+        self.episode_counter = 0
+        env = gym.make("LunarLander-v2")
+        env.seed(0)
+        self.eval_state = torch.from_numpy(env.reset()).float().unsqueeze(0).to(self.device)
+        run_name = config["run_name"]
+        self.softmax = torch.nn.Softmax(dim=1)
+        self.fig, self.ax = plt.subplots()
+        self.fig1, self.ax1 = plt.subplots()
+        wandb.init(
+                project="normalize_experiments",
+                sync_tensorboard=True,
+                name=run_name,
+                monitor_gym=True,
+                save_code=True,
+        )
+        self.wandb = wandb
     def step(self):
         self.steps +=1 
         if self.steps % self.update_freq == 0:
             if len(self.memory) > self.batch_size:
                 self.learn()
 
-    def act(self, state, eps=0.):
+    def act2(self, state, eps=0.):
         """Returns actions for given state as per current policy.
         
         Params
@@ -118,7 +135,7 @@ class DQNAgent():
         loss.backward()
         self.writer.add_scalar('q_loss', loss, self.steps)
         self.optimizer.step()
-
+        normilze_weights(self.qnetwork_local.fc1)
         # ------------------- update target network ------------------- #
         self.soft_update(self.qnetwork_local, self.qnetwork_target, self.tau)                     
 
@@ -153,6 +170,9 @@ class DQNAgent():
         for i_epiosde in range(1, self.episodes + 1):
             episode_reward = 0
             state = self.env.reset()
+            self.episode_counter += 1
+            self.save_q = True
+            t = 0
             while True:
                 t += 1
                 action = self.act(state, eps)
@@ -172,6 +192,7 @@ class DQNAgent():
             eps = max(self.eps_end, self.eps_decay * eps) # decrease epsilon
             ave_reward = np.mean(scores_window)
             print("Epiosde {} Steps {} Reward {} Reward averge{:.2f}  eps {:.2f} Time {}".format(i_epiosde, t, episode_reward, np.mean(scores_window), eps, time_format(time.time() - t0)))
+            self.wandb.log({"aver_reward": ave_reward, "steps_in_episode": t})
             self.writer.add_scalar('Aver_reward', ave_reward, self.steps)
             self.writer.add_scalar('steps_in_episode', t, self.steps)
 
@@ -179,18 +200,39 @@ class DQNAgent():
     def act(self, state, eps):
         
         # Epsilon-greedy action selection
+        
+        # import pdb; pdb.set_trace()
         if random.random() < eps:
             return random.choice(np.arange(self.action_size))
         state = torch.from_numpy(state).float().unsqueeze(0).to(self.device)
         self.qnetwork_local.eval()
         with torch.no_grad():
             action_values = self.qnetwork_local(state)
+            if  self.episode_counter % 10 == 0 and self.save_q: 
+                self.save_q = False
+                eval_values = self.qnetwork_local(self.eval_state)
+                eval_soft = self.softmax(eval_values.detach())
+                data = eval_values.cpu().numpy()
+                soft_data = eval_soft.cpu().numpy()
+                #self.ax.hist(data, 4)
+                #self.ax1.hist(soft_data, 4)
+                #q_table = self.wandb.Table(data=[hist], columns=["1"])
+                #q_table = self.wandb.Table(data=[hist], columns=["1", "2"])
+                
+                #import pdb; pdb.set_trace()
+                # q_table = self.wandb.Table(data=[data, [i for i in range(4)]], columns=["1","2", "3", "4"])
+                #q_soft = self.wandb.Table(data=soft_data, columns=["1","2","3","4"])
+                self.wandb.log({"q_values": self.wandb.Histogram(data[0])})
+                #self.wandb.log({"q_values": self.fig})
+                #self.wandb.log({"softmax": self.wandb.Histogram(q_soft, "softmax")})
+                #self.wandb.log({"softmax": self.fig1})
         self.qnetwork_local.train()
         return np.argmax(action_values.cpu().data.numpy())
 
 
     def eval_policy(self, eval_episodes=4):
-        env  = wrappers.Monitor(self.env, str(self.vid_path) + "/{}".format(self.steps), video_callable=lambda episode_id: True,force=True)
+        # env  = wrappers.Monitor(self.env, str(self.vid_path) + "/{}".format(self.steps), video_callable=lambda episode_id: True,force=True)
+        env = self.env
         average_reward = 0
         scores_window = deque(maxlen=100)
         for i_epiosde in range(eval_episodes):

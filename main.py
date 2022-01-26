@@ -17,6 +17,7 @@ def main(args):
     config["seed"] = args.seed
     config["agent"] = args.agent
     config["memory_size"] = args.memory_size
+    config["run_name"] = args.rn
     env = gym.make('LunarLander-v2')
     #env = gym.wrappers.Monitor(env, "./vid", video_callable=lambda episode_id: True,force=True)
     env.seed(config['seed'])
@@ -43,6 +44,7 @@ if __name__ == "__main__":
     parser.add_argument('--agent', default=1, type=int) 
     parser.add_argument('--memory_size', default=5000, type=int) 
     parser.add_argument('--locexp', default="", type=str) 
+    parser.add_argument('--rn', default="default_run_name", type=str) 
     arg = parser.parse_args()
     main(arg)
 
