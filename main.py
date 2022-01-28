@@ -17,6 +17,8 @@ def main(args):
     config["seed"] = args.seed
     config["agent"] = args.agent
     config["memory_size"] = args.memory_size
+    config["track"] = args.track
+    config["wandb_name"] = args.wandb_name
     if args.game is not None:
         print("change game ", args.game)
         config["env_name"] = args.game
@@ -49,6 +51,8 @@ if __name__ == "__main__":
     parser.add_argument('--memory_size', default=5000, type=int) 
     parser.add_argument('--locexp', default="", type=str) 
     parser.add_argument('--game', default=None, type=str) 
+    parser.add_argument('--track', default=False, type=bool) 
+    parser.add_argument('--wandb_name', default="test", type=str) 
     arg = parser.parse_args()
     main(arg)
 

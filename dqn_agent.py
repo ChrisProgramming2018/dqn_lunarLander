@@ -3,6 +3,7 @@ import numpy as np
 import random
 import gym
 from collections import namedtuple, deque
+import wandb
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
@@ -30,6 +31,8 @@ class DQNAgent():
         self.state_size = state_size
         self.action_size = action_size
         self.seed = config["seed"]
+        self.track = config["track"]
+        self.wandb_name = config["wandb_name"]
         torch.manual_seed(self.seed)
         np.random.seed(seed=self.seed)
         random.seed(self.seed)
@@ -148,6 +151,13 @@ class DQNAgent():
         print("... model loaded")
 
     def train_agent(self):
+        if self.track:
+            wandb.init(
+                    project="master_lab",
+                    name=self.wandb_name,
+                    sync_tensorboard=True,
+                    monitor_gym=True,
+                    )                                                                                   
         average_reward = 0
         scores_window = deque(maxlen=100)
         step_window = deque(maxlen=100)
@@ -179,6 +189,9 @@ class DQNAgent():
             eps = max(self.eps_end, self.eps_decay * eps) # decrease epsilon
             ave_reward = np.mean(scores_window)
             ave_steps = np.mean(step_window)
+            if self.track:
+                wandb.log({"Reward": episode_reward, "episode steps": episode_steps, "reward averge":ave_reward, "steps averge": ave_steps})
+
             print("Epiosde {} Steps {} Reward {} Reward averge{:.2f} steps {} ave steps {}  eps {:.2f} Time {}".format(i_epiosde, t, episode_reward, ave_reward, episode_steps, ave_steps, eps, time_format(time.time() - t0)))
             self.writer.add_scalar('Aver_reward', ave_reward, self.steps)
             self.writer.add_scalar('steps_in_episode', t, self.steps)
@@ -198,7 +211,8 @@ class DQNAgent():
 
 
     def eval_policy(self, eval_episodes=4):
-        env  = wrappers.Monitor(self.env, str(self.vid_path) + "/{}".format(self.steps), video_callable=lambda episode_id: True,force=True)
+        # env  = wrappers.Monitor(self.env, str(self.vid_path) + "/{}".format(self.steps), video_callable=lambda episode_id: True,force=True)
+        env = self.env
         average_reward = 0
         scores_window = deque(maxlen=100)
         for i_epiosde in range(eval_episodes):
