@@ -9,7 +9,7 @@ import torch.optim as optim
 from replay_buffer import ReplayBuffer
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
-from model import QNetwork, normilze_weights
+from model import QNetwork, normalize_weights 
 import time
 from gym import wrappers
 import matplotlib.pyplot as plt
@@ -48,6 +48,11 @@ class DQNAgent():
         # Q-Network
         self.qnetwork_local = QNetwork(state_size, action_size, self.seed).to(self.device)
         self.qnetwork_target = QNetwork(state_size, action_size, self.seed).to(self.device)
+        self.q:_nets = 3
+        self.q_network_targets = []
+        self.current_target_net = 0
+        for net in range(self.q_nets):
+            self.q_network_targets.append(QNetwork(state_size, action_size, self.seed).to(self.device))
         self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=self.lr)
         self.memory = ReplayBuffer((state_size, ), (1, ), int(config["buffer_size"]), self.seed, config['device'])
         now = datetime.now()
@@ -81,6 +86,7 @@ class DQNAgent():
                 monitor_gym=True,
                 save_code=True,
         )
+
         self.wandb = wandb
     def step(self):
         self.steps +=1 
@@ -135,9 +141,12 @@ class DQNAgent():
         loss.backward()
         self.writer.add_scalar('q_loss', loss, self.steps)
         self.optimizer.step()
-        normilze_weights(self.qnetwork_local.fc1)
         # ------------------- update target network ------------------- #
-        self.soft_update(self.qnetwork_local, self.qnetwork_target, self.tau)                     
+        self.soft_update(self.qnetwork_local, self.qnetwork_target, self.tau) 
+        if self.steps % self.update_freq == 0:
+            self.soft_update(self, self.qnetwork_target, self.q_network_targets[self.current_target_net], 1)
+            self.current_target_net += 1
+            self.current_target_net %= self.q_nets
 
     def soft_update(self, local_model, target_model, tau):
         """Soft update model parameters.
@@ -167,6 +176,7 @@ class DQNAgent():
         eps = self.eps_start
         t = 0
         t0 = time.time()
+        self.compute_overestimation()
         for i_epiosde in range(1, self.episodes + 1):
             episode_reward = 0
             state = self.env.reset()
@@ -185,6 +195,7 @@ class DQNAgent():
                 if done:
                     break
             if i_epiosde % self.eval == 0:
+                self.compute_overestimation()
                 self.save_model(self.locexp +"/models/model-{}".format(self.steps))
                 self.eval_policy()
             
@@ -197,6 +208,16 @@ class DQNAgent():
             self.writer.add_scalar('steps_in_episode', t, self.steps)
 
 
+    def act_greedy(self, state):
+        state = torch.from_numpy(state).float().unsqueeze(0).to(self.device)
+        self.qnetwork_local.eval()
+        with torch.no_grad():
+            action_values = self.qnetwork_local(state)
+
+        self.qnetwork_local.train()
+        return np.argmax(action_values.cpu().data.numpy()) ,np.max(action_values.cpu().data.numpy())
+
+    
     def act(self, state, eps):
         
         # Epsilon-greedy action selection
@@ -220,6 +241,12 @@ class DQNAgent():
                 #q_table = self.wandb.Table(data=[hist], columns=["1", "2"])
                 
                 #import pdb; pdb.set_trace()
+                max_policy = soft_data.max()
+                action = soft_data.argmax()
+                q_value_mean = data.mean()
+                self.wandb.log({"prob best action": max_policy})
+                self.wandb.log({"best action": action})
+                self.wandb.log({"q values": q_value_mean})
                 # q_table = self.wandb.Table(data=[data, [i for i in range(4)]], columns=["1","2", "3", "4"])
                 #q_soft = self.wandb.Table(data=soft_data, columns=["1","2","3","4"])
                 self.wandb.log({"q_values": self.wandb.Histogram(data[0])})
@@ -249,6 +276,35 @@ class DQNAgent():
         average_reward = np.mean(scores_window)
         print("Eval reward ", average_reward)
         self.writer.add_scalar('Eval_reward', average_reward, self.steps)
+
+    def compute_overestimation(self):
+        env = self.env
+        env.seed(0)
+        state = env.reset()
+        episode_reward = []
+        estimated_q_values = []
+        steps  = 0
+        while True:
+            steps += 1
+            action, q_estimate = self.act_greedy(state)
+            estimated_q_values.append(q_estimate)
+            state, reward, done, _ = env.step(action)
+            episode_reward.append(reward)
+            if done:
+                break
+        discounted_reward = []
+        for idx, reward in enumerate(episode_reward):
+            tmp = 0
+            for i, r in enumerate(episode_reward[idx:]):
+                tmp += r*self.gamma**(i+1)
+            discounted_reward.append(tmp)
+        mean_overestimate = np.mean(np.array(estimated_q_values) - np.array(discounted_reward))
+        episode_reward = sum(episode_reward)
+        print("steps", steps)
+        print("mean_overest", mean_overestimate)
+        print("epsiode reward", episode_reward)
+        self.wandb.log({"mean_overestimate": int(mean_overestimate)})
+        self.wandb.log({"overest_reward": int(episode_reward)})
 
     def watch_trained_agent(self, eval_episodes):
         self.load_model(self.locexp + "/models/model-{}".format(self.agent))
